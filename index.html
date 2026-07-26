@@ -90,6 +90,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--ink);min-height:100vh;ove
 .c-visual{position:relative;width:100%;height:185px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .country-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;}
 .scene-bg{position:absolute;inset:0;}
+.scene-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.025);transition:opacity .35s ease,transform 5s ease;z-index:1;}
+.scene-photo.loaded{opacity:1;transform:scale(1);}
 .scene-landmark{position:relative;z-index:2;font-size:72px;line-height:1;filter:drop-shadow(0 4px 20px rgba(0,0,0,.5));animation:landmarkPop .4s ease;}
 @keyframes landmarkPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .scene-label{position:relative;z-index:2;font-size:11px;color:rgba(255,255,255,.7);margin-top:6px;font-style:italic;text-shadow:0 1px 6px rgba(0,0,0,.8);letter-spacing:.3px;}
@@ -195,6 +197,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ink);min-height:100vh;ove
     <div class="c-visual">
       <div class="country-scene" id="cScene">
         <div class="scene-bg" id="sceneBg"></div>
+        <img class="scene-photo" id="scenePhoto" alt="">
         <div class="scene-landmark" id="sceneLandmark">🏛️</div>
         <div class="scene-label" id="sceneLabel"></div>
       </div>
@@ -247,18 +250,18 @@ function toggleSnd(){sndOn=!sndOn;document.getElementById('sndBtn').textContent=
 const LEVELS=[
 {id:1,name:"Explorador",region:"Europa Occidental",emoji:"🗺️",timer:15,desc:"Capitales básicas de Europa Occidental",
 countries:[
-{c:"Francia",k:"París",f:"🇫🇷",scene:{bg:"linear-gradient(160deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%)",ic:"🗼",lb:"Torre Eiffel, París"}},
-{c:"España",k:"Madrid",f:"🇪🇸",scene:{bg:"linear-gradient(160deg,#1a0a00 0%,#8b1a1a 40%,#c0392b 100%)",ic:"🏟️",lb:"Plaza de toros, Madrid"}},
-{c:"Italia",k:"Roma",f:"🇮🇹",scene:{bg:"linear-gradient(160deg,#0d1b2a 0%,#1b4332 40%,#2d6a4f 100%)",ic:"🏛️",lb:"Coliseo Romano"}},
-{c:"Alemania",k:"Berlín",f:"🇩🇪",scene:{bg:"linear-gradient(160deg,#1c1c1c 0%,#2d2d2d 40%,#404040 100%)",ic:"🚪",lb:"Puerta de Brandeburgo"}},
-{c:"Portugal",k:"Lisboa",f:"🇵🇹",scene:{bg:"linear-gradient(160deg,#001f3f 0%,#0e4d92 40%,#1565c0 100%)",ic:"🚋",lb:"Tranvía 28, Lisboa"}},
-{c:"Grecia",k:"Atenas",f:"🇬🇷",scene:{bg:"linear-gradient(160deg,#0a1628 0%,#1565c0 50%,#42a5f5 100%)",ic:"🏛️",lb:"Partenón, Atenas"}},
-{c:"Países Bajos",k:"Ámsterdam",f:"🇳🇱",scene:{bg:"linear-gradient(160deg,#0d2137 0%,#1a4a7a 40%,#236fa1 100%)",ic:"⛵",lb:"Canales de Ámsterdam"}},
-{c:"Bélgica",k:"Bruselas",f:"🇧🇪",scene:{bg:"linear-gradient(160deg,#1a1200 0%,#7d5a00 40%,#b8860b 100%)",ic:"🍺",lb:"Grand Place, Bruselas"}},
-{c:"Austria",k:"Viena",f:"🇦🇹",scene:{bg:"linear-gradient(160deg,#1a0a14 0%,#6b2737 40%,#9b2335 100%)",ic:"🎻",lb:"Ópera de Viena"}},
-{c:"Suecia",k:"Estocolmo",f:"🇸🇪",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d73 40%,#0066cc 100%)",ic:"👑",lb:"Gamla Stan, Estocolmo"}},
-{c:"Dinamarca",k:"Copenhague",f:"🇩🇰",scene:{bg:"linear-gradient(160deg,#1a0a0a 0%,#8b1a1a 40%,#c41e3a 100%)",ic:"🧜",lb:"La Sirenita, Copenhague"}},
-{c:"Finlandia",k:"Helsinki",f:"🇫🇮",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003366 40%,#004080 100%)",ic:"🌌",lb:"Aurora Boreal, Finlandia"}},
+{c:"Francia",k:"París",f:"🇫🇷",scene:{bg:"linear-gradient(160deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%)",ic:"🗼",lb:"Torre Eiffel",img:"assets/capitals/paris.webp"}},
+{c:"España",k:"Madrid",f:"🇪🇸",scene:{bg:"linear-gradient(160deg,#1a0a00 0%,#8b1a1a 40%,#c0392b 100%)",ic:"🏟️",lb:"Palacio de Cibeles",img:"assets/capitals/madrid.webp"}},
+{c:"Italia",k:"Roma",f:"🇮🇹",scene:{bg:"linear-gradient(160deg,#0d1b2a 0%,#1b4332 40%,#2d6a4f 100%)",ic:"🏛️",lb:"Coliseo Romano",img:"assets/capitals/roma.webp"}},
+{c:"Alemania",k:"Berlín",f:"🇩🇪",scene:{bg:"linear-gradient(160deg,#1c1c1c 0%,#2d2d2d 40%,#404040 100%)",ic:"🚪",lb:"Puerta de Brandeburgo",img:"assets/capitals/berlin.webp"}},
+{c:"Portugal",k:"Lisboa",f:"🇵🇹",scene:{bg:"linear-gradient(160deg,#001f3f 0%,#0e4d92 40%,#1565c0 100%)",ic:"🚋",lb:"Torre de Belém",img:"assets/capitals/lisboa.webp"}},
+{c:"Grecia",k:"Atenas",f:"🇬🇷",scene:{bg:"linear-gradient(160deg,#0a1628 0%,#1565c0 50%,#42a5f5 100%)",ic:"🏛️",lb:"Acrópolis",img:"assets/capitals/atenas.webp"}},
+{c:"Países Bajos",k:"Ámsterdam",f:"🇳🇱",scene:{bg:"linear-gradient(160deg,#0d2137 0%,#1a4a7a 40%,#236fa1 100%)",ic:"⛵",lb:"Casas del canal Damrak",img:"assets/capitals/amsterdam.webp"}},
+{c:"Bélgica",k:"Bruselas",f:"🇧🇪",scene:{bg:"linear-gradient(160deg,#1a1200 0%,#7d5a00 40%,#b8860b 100%)",ic:"🍺",lb:"Grand-Place",img:"assets/capitals/bruselas.webp"}},
+{c:"Austria",k:"Viena",f:"🇦🇹",scene:{bg:"linear-gradient(160deg,#1a0a14 0%,#6b2737 40%,#9b2335 100%)",ic:"🎻",lb:"Palacio de Schönbrunn",img:"assets/capitals/viena.webp"}},
+{c:"Suecia",k:"Estocolmo",f:"🇸🇪",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d73 40%,#0066cc 100%)",ic:"👑",lb:"Gamla Stan",img:"assets/capitals/estocolmo.webp"}},
+{c:"Dinamarca",k:"Copenhague",f:"🇩🇰",scene:{bg:"linear-gradient(160deg,#1a0a0a 0%,#8b1a1a 40%,#c41e3a 100%)",ic:"🧜",lb:"Puerto de Nyhavn",img:"assets/capitals/copenhague.webp"}},
+{c:"Finlandia",k:"Helsinki",f:"🇫🇮",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003366 40%,#004080 100%)",ic:"🌌",lb:"Catedral de Helsinki",img:"assets/capitals/helsinki.webp"}},
 ]},
 {id:2,name:"Viajero",region:"Américas",emoji:"✈️",timer:15,desc:"Capitales de América del Norte y Sur",
 countries:[
@@ -401,7 +404,7 @@ function getBest(id){return(S.ranking[id]||[]).sort((a,b)=>b.score-a.score)[0]||
 function addRank(id,e){if(!S.ranking[id])S.ranking[id]=[];S.ranking[id]=[...S.ranking[id],e].sort((a,b)=>b.score-a.score).slice(0,20);}
 function req(id){S.pendingLv=id;if(S.playerName){startLv(id);return;}showSc('nameScreen');setTimeout(()=>document.getElementById('pName').focus(),300);}
 function okName(guest=false){const v=document.getElementById('pName').value.trim();S.playerName=guest?'Invitado':(v||'Viajero');save();startLv(S.pendingLv);}
-function renderScene(q){document.getElementById('sceneBg').style.background=q.scene.bg;document.getElementById('sceneLandmark').textContent=q.scene.ic;document.getElementById('sceneLabel').textContent=q.scene.lb;document.getElementById('bigFlag').textContent=q.f;}
+function renderScene(q){const bg=document.getElementById('sceneBg'),photo=document.getElementById('scenePhoto'),landmark=document.getElementById('sceneLandmark'),label=document.getElementById('sceneLabel');bg.style.background=q.scene.bg;photo.classList.remove('loaded');if(q.scene.img){photo.alt=`Vista emblemática de ${q.c}`;photo.onload=()=>photo.classList.add('loaded');photo.src=q.scene.img;photo.style.display='block';landmark.style.display='none';label.style.display='none';}else{photo.removeAttribute('src');photo.alt='';photo.style.display='none';landmark.style.display='';landmark.textContent=q.scene.ic;label.style.display='';label.textContent=q.scene.lb;}document.getElementById('bigFlag').textContent=q.f;}
 function startLv(id){S.lv=LEVELS.find(l=>l.id===id);S.score=0;S.lives=3;S.correct=0;S.qi=0;S.answered=false;S.bestTime=S.lv.timer;S.queue=[...S.lv.countries].sort(()=>Math.random()-.5).slice(0,10);showSc('quiz');renderQ();}
 function renderQ(){clearInterval(S.tint);if(S.qi>=S.queue.length||S.lives<=0){showResult();return;}S.answered=false;const q=S.queue[S.qi];const T=S.lv.timer;document.getElementById('scoreDisp').textContent=S.score;document.getElementById('livesDisp').textContent='❤️'.repeat(S.lives)+'🖤'.repeat(3-S.lives);document.getElementById('qCount').textContent=`${S.qi+1}/${S.queue.length}`;document.getElementById('progBar').style.width=`${(S.qi/S.queue.length)*100}%`;document.getElementById('lvLabel').textContent=`Nivel ${S.lv.id} · ${S.lv.region}`;document.getElementById('qText').textContent=`¿Cuál es la capital de ${q.c}?`;renderScene(q);const pool=LEVELS.flatMap(l=>l.countries).map(x=>x.k);const wrongs=pool.filter(x=>x!==q.k).sort(()=>Math.random()-.5).slice(0,3);const opts=[q.k,...wrongs].sort(()=>Math.random()-.5);document.getElementById('optsGrid').innerHTML=opts.map((o,i)=>`<button class="opt-btn" onclick="pick(this,'${o.replace(/'/g,"\\'")}','${q.k.replace(/'/g,"\\'")}')"><div class="opt-ltr">${'ABCD'[i]}</div>${o}</button>`).join('');document.getElementById('fbBanner').className='fb-banner';startTimer(T);}
 function startTimer(T){S.tval=T;updTimer(T);S.tint=setInterval(()=>{S.tval--;updTimer(T);if(S.tval<=0){clearInterval(S.tint);if(!S.answered)doTimeout();}},1000);}
