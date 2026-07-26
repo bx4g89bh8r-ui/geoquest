@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoQuest — Capitales del Mundo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f1923;--paper:#f5f0e8;--gold:#c8982a;--gold-light:#e8c060;
+  --teal:#1a7a6e;--teal-light:#2aab99;--coral:#d95f3b;--sky:#3a7bd5;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--ink);min-height:100vh;overflow-x:hidden;}
+.map-bg{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(26,122,110,.25) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 20%,rgba(58,123,213,.2) 0%,transparent 50%),
+             radial-gradient(ellipse at 60% 80%,rgba(200,152,42,.15) 0%,transparent 50%),#0f1923;}
+.map-bg::before{content:'';position:absolute;inset:0;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.03) 40px),
+                   repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.03) 40px);}
+.screen{display:none;position:relative;z-index:1;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+#home{justify-content:flex-start;padding-top:24px;padding-bottom:24px;text-align:center;}
+.globe-icon{font-size:58px;line-height:1;margin-bottom:6px;animation:float 3s ease-in-out infinite;display:block;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.app-title{font-family:'Playfair Display',serif;font-size:clamp(30px,7vw,54px);font-weight:900;color:var(--paper);line-height:1;}
+.app-title span{color:var(--gold-light);display:block;font-size:.42em;font-weight:700;letter-spacing:4px;text-transform:uppercase;margin-top:3px;}
+.app-subtitle{color:rgba(245,240,232,.45);font-size:13px;margin:7px 0 5px;}
+.home-nav{display:flex;gap:9px;margin-bottom:18px;}
+.nav-btn{background:rgba(245,240,232,.07);border:1px solid rgba(245,240,232,.14);border-radius:11px;padding:7px 16px;color:var(--paper);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;backdrop-filter:blur(6px);}
+.nav-btn:hover{background:rgba(245,240,232,.13);}
+.nav-btn.active-tab{background:rgba(200,152,42,.18);border-color:rgba(200,152,42,.5);color:var(--gold-light);}
+.levels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;width:100%;max-width:900px;margin-bottom:16px;}
+.lv-card{background:rgba(245,240,232,.05);border:1px solid rgba(245,240,232,.09);border-radius:16px;padding:15px 14px;cursor:pointer;transition:all .3s;text-align:left;backdrop-filter:blur(8px);position:relative;overflow:hidden;}
+.lv-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--cc,transparent) 0%,transparent 60%);opacity:0;transition:opacity .3s;}
+.lv-card:hover:not(.locked){transform:translateY(-4px);border-color:rgba(245,240,232,.26);}
+.lv-card:hover:not(.locked)::before{opacity:.14;}
+.lv-card.locked{opacity:.34;cursor:not-allowed;}
+.lv-card[data-lv="1"]{--cc:#2aab99}.lv-card[data-lv="2"]{--cc:#3a7bd5}
+.lv-card[data-lv="3"]{--cc:#c8982a}.lv-card[data-lv="4"]{--cc:#d95f3b}
+.lv-card[data-lv="5"]{--cc:#9b59b6}.lv-card[data-lv="6"]{--cc:#16a085}
+.lv-card[data-lv="7"]{--cc:#e67e22}.lv-card[data-lv="8"]{--cc:#2980b9}
+.lv-card[data-lv="9"]{--cc:#c0392b}
+.lv-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.09);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--paper);margin-bottom:7px;}
+.lv-name{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--paper);margin-bottom:2px;}
+.lv-desc{font-size:11px;color:rgba(245,240,232,.4);margin-bottom:8px;line-height:1.35;}
+.lv-stars{font-size:14px;letter-spacing:2px;}
+.lv-record{color:var(--gold-light);font-size:10px;margin-top:3px;}
+.lv-timer{font-size:10px;color:rgba(245,240,232,.28);margin-top:2px;}
+#rkPanel{display:none;width:100%;max-width:560px;margin-bottom:18px;}
+#rkPanel.on{display:block;}
+.rk-title{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--paper);margin-bottom:2px;}
+.rk-sub{font-size:12px;color:rgba(245,240,232,.36);margin-bottom:12px;}
+.rk-tabs{display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;}
+.rtab{background:rgba(245,240,232,.05);border:1px solid rgba(245,240,232,.1);border-radius:9px;padding:4px 10px;font-size:10px;color:rgba(245,240,232,.46);cursor:pointer;transition:all .2s;font-weight:500;}
+.rtab.on{background:rgba(200,152,42,.17);border-color:rgba(200,152,42,.42);color:var(--gold-light);}
+.rk-list{display:flex;flex-direction:column;gap:6px;}
+.rk-row{background:rgba(245,240,232,.04);border:1px solid rgba(245,240,232,.08);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px;backdrop-filter:blur(6px);}
+.rk-row.g{border-color:rgba(200,152,42,.38);background:rgba(200,152,42,.07);}
+.rk-row.s{border-color:rgba(180,180,200,.22);background:rgba(180,180,200,.04);}
+.rk-row.b{border-color:rgba(180,100,50,.24);background:rgba(180,100,50,.04);}
+.rk-pos{font-size:17px;min-width:26px;text-align:center;}
+.rk-name{flex:1;font-weight:600;color:var(--paper);font-size:13px;}
+.rk-meta{font-size:10px;color:rgba(245,240,232,.34);margin-top:1px;}
+.rk-score{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--gold-light);}
+.rk-empty{text-align:center;padding:24px;color:rgba(245,240,232,.26);font-size:13px;}
+#nameScreen{text-align:center;}
+.name-card{background:rgba(245,240,232,.06);border:1px solid rgba(245,240,232,.12);border-radius:20px;padding:28px 24px;max-width:380px;width:100%;backdrop-filter:blur(12px);}
+.name-card h2{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--paper);margin-bottom:4px;}
+.name-card p{color:rgba(245,240,232,.4);font-size:12px;margin-bottom:20px;}
+.name-input{width:100%;background:rgba(245,240,232,.08);border:1px solid rgba(245,240,232,.18);border-radius:10px;padding:11px 14px;color:var(--paper);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;margin-bottom:12px;transition:border .2s;}
+.name-input::placeholder{color:rgba(245,240,232,.26);}
+.name-input:focus{border-color:var(--teal-light);}
+#quiz{gap:0;padding:10px;justify-content:flex-start;padding-top:10px;}
+.q-hdr{width:100%;max-width:560px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+.q-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.pill{background:rgba(245,240,232,.07);border:1px solid rgba(245,240,232,.11);border-radius:18px;padding:4px 10px;font-size:11px;color:var(--paper);font-weight:500;display:flex;align-items:center;gap:4px;backdrop-filter:blur(6px);}
+.pill.score{color:var(--gold-light);border-color:rgba(200,152,42,.3);}
+.pill.lives{color:#e87070;}
+.tmr-wrap{width:100%;max-width:560px;display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.tmr-bg{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;}
+.tmr-fill{height:100%;border-radius:10px;transition:width .1s linear,background .4s;}
+.tmr-lbl{font-size:13px;font-weight:700;color:var(--paper);min-width:24px;text-align:right;}
+.tmr-lbl.urgent{color:#e87070;animation:pulse .45s ease infinite alternate;}
+@keyframes pulse{from{opacity:1}to{opacity:.4}}
+.prog-wrap{width:100%;max-width:560px;height:3px;background:rgba(255,255,255,.05);border-radius:10px;margin-bottom:10px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--teal-light),var(--gold-light));border-radius:10px;transition:width .5s;}
+.c-card{width:100%;max-width:560px;background:rgba(245,240,232,.05);border:1px solid rgba(245,240,232,.09);border-radius:20px;overflow:hidden;backdrop-filter:blur(12px);margin-bottom:9px;}
+.c-visual{position:relative;width:100%;height:185px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.country-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;}
+.scene-bg{position:absolute;inset:0;}
+.scene-landmark{position:relative;z-index:2;font-size:72px;line-height:1;filter:drop-shadow(0 4px 20px rgba(0,0,0,.5));animation:landmarkPop .4s ease;}
+@keyframes landmarkPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.scene-label{position:relative;z-index:2;font-size:11px;color:rgba(255,255,255,.7);margin-top:6px;font-style:italic;text-shadow:0 1px 6px rgba(0,0,0,.8);letter-spacing:.3px;}
+.v-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(10,20,34,.6) 100%);z-index:1;}
+.big-flag{position:absolute;bottom:10px;right:12px;font-size:56px;line-height:1;filter:drop-shadow(0 3px 12px rgba(0,0,0,.8));z-index:4;transition:transform .3s;user-select:none;}
+.c-card:hover .big-flag{transform:scale(1.1) rotate(-3deg);}
+.c-body{padding:11px 16px 14px;}
+.c-lvlabel{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-light);margin-bottom:3px;}
+.c-question{font-family:'Playfair Display',serif;font-size:clamp(15px,2.8vw,21px);font-weight:700;color:var(--paper);line-height:1.3;}
+.opts-grid{width:100%;max-width:560px;display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.opt-btn{background:rgba(245,240,232,.06);border:2px solid rgba(245,240,232,.1);border-radius:11px;padding:11px 12px;color:var(--paper);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;text-align:left;line-height:1.3;backdrop-filter:blur(6px);display:flex;align-items:center;gap:7px;}
+.opt-btn:hover:not(:disabled){background:rgba(245,240,232,.12);border-color:rgba(245,240,232,.26);transform:translateY(-2px);}
+.opt-ltr{width:23px;height:23px;border-radius:50%;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;color:var(--gold-light);}
+.opt-btn.correct{background:rgba(42,171,153,.2);border-color:var(--teal-light);}
+.opt-btn.correct .opt-ltr{background:var(--teal-light);color:#fff;}
+.opt-btn.wrong{background:rgba(217,95,59,.2);border-color:var(--coral);}
+.opt-btn.wrong .opt-ltr{background:var(--coral);color:#fff;}
+.opt-btn:disabled{cursor:default;}
+.fb-banner{width:100%;max-width:560px;border-radius:11px;padding:10px 13px;margin-top:7px;display:flex;align-items:center;gap:9px;opacity:0;pointer-events:none;transition:opacity .25s;}
+.fb-banner.show{opacity:1;pointer-events:auto;animation:slideUp .28s ease;}
+.fb-banner.success{background:rgba(42,171,153,.14);border:1px solid rgba(42,171,153,.38);}
+.fb-banner.fail{background:rgba(217,95,59,.14);border:1px solid rgba(217,95,59,.38);}
+.fb-banner.timeout{background:rgba(200,152,42,.14);border:1px solid rgba(200,152,42,.38);}
+.fb-icon{font-size:21px;flex-shrink:0;}
+.fb-text strong{display:block;color:var(--paper);font-size:12px;margin-bottom:1px;}
+.fb-text span{color:rgba(245,240,232,.48);font-size:11px;}
+.nxt-btn{margin-left:auto;background:var(--teal-light);border:none;border-radius:9px;padding:7px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:12px;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.nxt-btn:hover{background:var(--teal);}
+@keyframes slideUp{from{transform:translateY(7px);opacity:0}to{transform:translateY(0);opacity:1}}
+#result{text-align:center;}
+.res-emoji{font-size:60px;margin-bottom:8px;animation:bounce .55s ease;}
+@keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+.res-title{font-family:'Playfair Display',serif;font-size:clamp(22px,5vw,40px);font-weight:900;color:var(--paper);margin-bottom:4px;}
+.res-sub{color:rgba(245,240,232,.42);font-size:13px;margin-bottom:16px;}
+.res-stats{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
+.s-box{background:rgba(245,240,232,.05);border:1px solid rgba(245,240,232,.09);border-radius:14px;padding:12px 16px;backdrop-filter:blur(8px);text-align:center;min-width:82px;}
+.s-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gold-light);display:block;}
+.s-lbl{font-size:10px;color:rgba(245,240,232,.32);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.stars-disp{font-size:28px;letter-spacing:5px;margin-bottom:18px;}
+.new-rec{background:linear-gradient(135deg,rgba(200,152,42,.2),rgba(200,152,42,.07));border:1px solid rgba(200,152,42,.45);border-radius:12px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;max-width:360px;}
+.new-rec span{color:var(--gold-light);font-weight:600;font-size:13px;}
+.new-rec small{display:block;color:rgba(245,240,232,.36);font-size:11px;font-weight:400;}
+.act-btns{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;}
+.btn-p{background:linear-gradient(135deg,var(--teal-light),var(--teal));border:none;border-radius:11px;padding:10px 20px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:opacity .2s,transform .2s;}
+.btn-p:hover{opacity:.9;transform:translateY(-2px);}
+.btn-g{background:rgba(245,240,232,.06);border:1px solid rgba(245,240,232,.14);border-radius:11px;padding:10px 20px;color:var(--paper);font-family:'DM Sans',sans-serif;font-weight:500;font-size:13px;cursor:pointer;transition:background .2s;backdrop-filter:blur(6px);}
+.btn-g:hover{background:rgba(245,240,232,.12);}
+.back-btn{background:none;border:1px solid rgba(245,240,232,.11);border-radius:9px;padding:5px 10px;color:rgba(245,240,232,.46);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .2s;}
+.back-btn:hover{background:rgba(245,240,232,.08);color:var(--paper);}
+.snd-btn{background:none;border:1px solid rgba(245,240,232,.1);border-radius:8px;padding:4px 9px;color:rgba(245,240,232,.44);font-size:12px;cursor:pointer;transition:all .2s;}
+.snd-btn:hover{background:rgba(245,240,232,.08);color:var(--paper);}
+.confetti-piece{position:fixed;top:-20px;animation:cf 3s ease-in forwards;z-index:999;}
+@keyframes cf{to{top:110vh;transform:rotate(720deg) translateX(var(--d));opacity:0}}
+@media(max-width:480px){.opts-grid{grid-template-columns:1fr}.levels-grid{grid-template-columns:1fr 1fr}.c-visual{height:150px}.big-flag{font-size:44px}.scene-landmark{font-size:56px}}
+</style>
+</head>
+<body>
+<div class="map-bg"></div>
+<div id="home" class="screen active">
+  <span class="globe-icon">🌍</span>
+  <h1 class="app-title">GeoQuest<span>Capitales del Mundo</span></h1>
+  <p class="app-subtitle">Aprende las capitales del mundo nivel por nivel</p>
+  <div class="home-nav">
+    <button class="nav-btn active-tab" id="tabN" onclick="switchTab('n')">🗺️ Niveles</button>
+    <button class="nav-btn" id="tabR" onclick="switchTab('r')">🏆 Ranking</button>
+  </div>
+  <div id="rkPanel">
+    <div class="rk-title">Tabla de Honor</div>
+    <div class="rk-sub">Los mejores exploradores del mundo</div>
+    <div class="rk-tabs" id="rkTabs"></div>
+    <div class="rk-list" id="rkList"></div>
+  </div>
+  <div id="lvlCont">
+    <div class="levels-grid" id="lvlGrid"></div>
+    <p style="color:rgba(245,240,232,.22);font-size:11px;margin-top:4px;">⭐ Gana al menos 1 estrella para desbloquear el siguiente nivel</p>
+  </div>
+</div>
+<div id="nameScreen" class="screen">
+  <div class="name-card">
+    <h2>¿Cómo te llamas?</h2>
+    <p>Tu nombre aparecerá en la Tabla de Honor</p>
+    <input class="name-input" id="pName" type="text" maxlength="20" placeholder="Tu nombre o apodo…" onkeydown="if(event.key==='Enter')okName()">
+    <button class="btn-p" style="width:100%" onclick="okName()">¡Comenzar Aventura! →</button>
+    <button class="btn-g" style="width:100%;margin-top:8px" onclick="okName(true)">Continuar como invitado</button>
+  </div>
+</div>
+<div id="quiz" class="screen">
+  <div class="q-hdr">
+    <button class="back-btn" onclick="goHome()">← Menú</button>
+    <div class="q-meta">
+      <div class="pill score">⭐ <span id="scoreDisp">0</span></div>
+      <div class="pill lives" id="livesDisp">❤️❤️❤️</div>
+      <div class="pill">🌍 <span id="qCount">1/10</span></div>
+      <button class="snd-btn" id="sndBtn" onclick="toggleSnd()">🔊</button>
+    </div>
+  </div>
+  <div class="tmr-wrap">
+    <div class="tmr-bg"><div class="tmr-fill" id="tmrBar" style="width:100%;background:#2aab99"></div></div>
+    <div class="tmr-lbl" id="tmrLbl">15</div>
+  </div>
+  <div class="prog-wrap"><div class="prog-fill" id="progBar" style="width:0%"></div></div>
+  <div class="c-card">
+    <div class="c-visual">
+      <div class="country-scene" id="cScene">
+        <div class="scene-bg" id="sceneBg"></div>
+        <div class="scene-landmark" id="sceneLandmark">🏛️</div>
+        <div class="scene-label" id="sceneLabel"></div>
+      </div>
+      <div class="v-overlay"></div>
+      <div class="big-flag" id="bigFlag"></div>
+    </div>
+    <div class="c-body">
+      <div class="c-lvlabel" id="lvLabel">Nivel 1</div>
+      <div class="c-question" id="qText">¿Cuál es la capital de...?</div>
+    </div>
+  </div>
+  <div class="opts-grid" id="optsGrid"></div>
+  <div class="fb-banner" id="fbBanner">
+    <div class="fb-icon" id="fbIcon"></div>
+    <div class="fb-text"><strong id="fbTitle"></strong><span id="fbSub"></span></div>
+    <button class="nxt-btn" id="nxtBtn" onclick="nextQ()">Siguiente →</button>
+  </div>
+</div>
+<div id="result" class="screen">
+  <div class="res-emoji" id="resEmoji">🏆</div>
+  <h2 class="res-title" id="resTitle"></h2>
+  <p class="res-sub" id="resSub"></p>
+  <div class="stars-disp" id="resStars"></div>
+  <div id="recBanner" style="display:none" class="new-rec">
+    <span>🥇</span>
+    <div><span>¡Nuevo récord personal!</span><small id="recTxt"></small></div>
+  </div>
+  <div class="res-stats">
+    <div class="s-box"><span class="s-val" id="rPts">0</span><div class="s-lbl">Puntos</div></div>
+    <div class="s-box"><span class="s-val" id="rOk">0</span><div class="s-lbl">Correctas</div></div>
+    <div class="s-box"><span class="s-val" id="rTime">—</span><div class="s-lbl">Mejor tiempo</div></div>
+    <div class="s-box"><span class="s-val" id="rAcc">0%</span><div class="s-lbl">Precisión</div></div>
+  </div>
+  <div class="act-btns">
+    <button class="btn-p" id="nxtLvlBtn" onclick="nextLvl()">Siguiente →</button>
+    <button class="btn-g" onclick="replay()">🔄 Repetir</button>
+    <button class="btn-g" onclick="goRank()">🏆 Ranking</button>
+    <button class="btn-g" onclick="goHome()">🏠 Menú</button>
+  </div>
+</div>
+<script>
+let actx=null,sndOn=true;
+function gctx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();return actx;}
+function tone(f,type,vol,t0,dur){try{const c=gctx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=type;o.frequency.setValueAtTime(f,c.currentTime+t0);g.gain.setValueAtTime(0,c.currentTime+t0);g.gain.linearRampToValueAtTime(vol,c.currentTime+t0+0.02);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+t0+dur);o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.01);}catch(e){}}
+function playOK(){if(!sndOn)return;[[523,0],[659,.1],[784,.2]].forEach(([f,d])=>tone(f,'sine',.22,d,.34));}
+function playWrong(){if(!sndOn)return;[[300,0],[220,.14]].forEach(([f,d])=>tone(f,'sawtooth',.16,d,.28));}
+function playTimeout(){if(!sndOn)return;try{const c=gctx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.setValueAtTime(440,c.currentTime);o.frequency.linearRampToValueAtTime(180,c.currentTime+.42);g.gain.setValueAtTime(.18,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.44);o.start(c.currentTime);o.stop(c.currentTime+.45);}catch(e){}}
+function playWin(){if(!sndOn)return;[[392,0],[523,.09],[659,.18],[784,.3],[1047,.44]].forEach(([f,d])=>tone(f,'sine',.2,d,.48));}
+function toggleSnd(){sndOn=!sndOn;document.getElementById('sndBtn').textContent=sndOn?'🔊':'🔇';if(sndOn)playOK();}
+const LEVELS=[
+{id:1,name:"Explorador",region:"Europa Occidental",emoji:"🗺️",timer:15,desc:"Capitales básicas de Europa Occidental",
+countries:[
+{c:"Francia",k:"París",f:"🇫🇷",scene:{bg:"linear-gradient(160deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%)",ic:"🗼",lb:"Torre Eiffel, París"}},
+{c:"España",k:"Madrid",f:"🇪🇸",scene:{bg:"linear-gradient(160deg,#1a0a00 0%,#8b1a1a 40%,#c0392b 100%)",ic:"🏟️",lb:"Plaza de toros, Madrid"}},
+{c:"Italia",k:"Roma",f:"🇮🇹",scene:{bg:"linear-gradient(160deg,#0d1b2a 0%,#1b4332 40%,#2d6a4f 100%)",ic:"🏛️",lb:"Coliseo Romano"}},
+{c:"Alemania",k:"Berlín",f:"🇩🇪",scene:{bg:"linear-gradient(160deg,#1c1c1c 0%,#2d2d2d 40%,#404040 100%)",ic:"🚪",lb:"Puerta de Brandeburgo"}},
+{c:"Portugal",k:"Lisboa",f:"🇵🇹",scene:{bg:"linear-gradient(160deg,#001f3f 0%,#0e4d92 40%,#1565c0 100%)",ic:"🚋",lb:"Tranvía 28, Lisboa"}},
+{c:"Grecia",k:"Atenas",f:"🇬🇷",scene:{bg:"linear-gradient(160deg,#0a1628 0%,#1565c0 50%,#42a5f5 100%)",ic:"🏛️",lb:"Partenón, Atenas"}},
+{c:"Países Bajos",k:"Ámsterdam",f:"🇳🇱",scene:{bg:"linear-gradient(160deg,#0d2137 0%,#1a4a7a 40%,#236fa1 100%)",ic:"⛵",lb:"Canales de Ámsterdam"}},
+{c:"Bélgica",k:"Bruselas",f:"🇧🇪",scene:{bg:"linear-gradient(160deg,#1a1200 0%,#7d5a00 40%,#b8860b 100%)",ic:"🍺",lb:"Grand Place, Bruselas"}},
+{c:"Austria",k:"Viena",f:"🇦🇹",scene:{bg:"linear-gradient(160deg,#1a0a14 0%,#6b2737 40%,#9b2335 100%)",ic:"🎻",lb:"Ópera de Viena"}},
+{c:"Suecia",k:"Estocolmo",f:"🇸🇪",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d73 40%,#0066cc 100%)",ic:"👑",lb:"Gamla Stan, Estocolmo"}},
+{c:"Dinamarca",k:"Copenhague",f:"🇩🇰",scene:{bg:"linear-gradient(160deg,#1a0a0a 0%,#8b1a1a 40%,#c41e3a 100%)",ic:"🧜",lb:"La Sirenita, Copenhague"}},
+{c:"Finlandia",k:"Helsinki",f:"🇫🇮",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003366 40%,#004080 100%)",ic:"🌌",lb:"Aurora Boreal, Finlandia"}},
+]},
+{id:2,name:"Viajero",region:"Américas",emoji:"✈️",timer:15,desc:"Capitales de América del Norte y Sur",
+countries:[
+{c:"Brasil",k:"Brasilia",f:"🇧🇷",scene:{bg:"linear-gradient(160deg,#001a00 0%,#006600 40%,#009900 100%)",ic:"🌿",lb:"Selva Amazónica"}},
+{c:"Argentina",k:"Buenos Aires",f:"🇦🇷",scene:{bg:"linear-gradient(160deg,#001433 0%,#003d80 40%,#0052a3 100%)",ic:"💃",lb:"Tango, Buenos Aires"}},
+{c:"México",k:"Ciudad de México",f:"🇲🇽",scene:{bg:"linear-gradient(160deg,#1a0d00 0%,#7a3b00 40%,#c05a00 100%)",ic:"🏯",lb:"Chichén Itzá"}},
+{c:"Colombia",k:"Bogotá",f:"🇨🇴",scene:{bg:"linear-gradient(160deg,#1a1000 0%,#7a5c00 40%,#f0c000 100%)",ic:"☕",lb:"Café colombiano"}},
+{c:"Perú",k:"Lima",f:"🇵🇪",scene:{bg:"linear-gradient(160deg,#0d1a1a 0%,#1a4a4a 40%,#2e8b57 100%)",ic:"🦙",lb:"Machu Picchu, Perú"}},
+{c:"Chile",k:"Santiago",f:"🇨🇱",scene:{bg:"linear-gradient(160deg,#0a0a1a 0%,#1a1a4a 40%,#2d2d8b 100%)",ic:"🏔️",lb:"Torres del Paine"}},
+{c:"Cuba",k:"La Habana",f:"🇨🇺",scene:{bg:"linear-gradient(160deg,#1a0a00 0%,#8b4513 40%,#d2691e 100%)",ic:"🚗",lb:"Malecón de La Habana"}},
+{c:"Bolivia",k:"Sucre",f:"🇧🇴",scene:{bg:"linear-gradient(160deg,#001a1a 0%,#006666 40%,#009999 100%)",ic:"🧂",lb:"Salar de Uyuni"}},
+{c:"Canadá",k:"Ottawa",f:"🇨🇦",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#800000 40%,#cc0000 100%)",ic:"🍁",lb:"Hoja de arce, Canadá"}},
+{c:"Uruguay",k:"Montevideo",f:"🇺🇾",scene:{bg:"linear-gradient(160deg,#0a1a2e 0%,#1a3d6b 40%,#2e6db4 100%)",ic:"🌊",lb:"Rambla de Montevideo"}},
+{c:"Ecuador",k:"Quito",f:"🇪🇨",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#007a00 100%)",ic:"🌋",lb:"Volcán Cotopaxi"}},
+{c:"Venezuela",k:"Caracas",f:"🇻🇪",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#004d1a 40%,#007a2d 100%)",ic:"💧",lb:"Salto Ángel"}},
+]},
+{id:3,name:"Geógrafo",region:"Asia Oriental y Pacífico",emoji:"🧭",timer:13,desc:"Capitales de Asia Oriental y Oceanía",
+countries:[
+{c:"Japón",k:"Tokio",f:"🇯🇵",scene:{bg:"linear-gradient(160deg,#1a0a0a 0%,#8b1a1a 50%,#ff4d4d 100%)",ic:"⛩️",lb:"Monte Fuji y Tokio"}},
+{c:"China",k:"Pekín",f:"🇨🇳",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#8b0000 40%,#ff0000 100%)",ic:"🐉",lb:"Gran Muralla China"}},
+{c:"Corea del Sur",k:"Seúl",f:"🇰🇷",scene:{bg:"linear-gradient(160deg,#0d1a33 0%,#1a3366 40%,#2e5cb8 100%)",ic:"🏯",lb:"Palacio Gyeongbokgung"}},
+{c:"Australia",k:"Canberra",f:"🇦🇺",scene:{bg:"linear-gradient(160deg,#1a0f00 0%,#8b4500 40%,#cc6600 100%)",ic:"🦘",lb:"Ópera de Sídney"}},
+{c:"Tailandia",k:"Bangkok",f:"🇹🇭",scene:{bg:"linear-gradient(160deg,#0a1a14 0%,#1a5c3d 40%,#2e9e6b 100%)",ic:"🛕",lb:"Templo Wat Arun"}},
+{c:"Vietnam",k:"Hanói",f:"🇻🇳",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#7a0000 40%,#cc0000 100%)",ic:"🌾",lb:"Bahía de Ha Long"}},
+{c:"Indonesia",k:"Yakarta",f:"🇮🇩",scene:{bg:"linear-gradient(160deg,#1a0a00 0%,#7a3300 40%,#b85c00 100%)",ic:"🏯",lb:"Templo Borobudur"}},
+{c:"Nueva Zelanda",k:"Wellington",f:"🇳🇿",scene:{bg:"linear-gradient(160deg,#0a1a1a 0%,#1a4a4a 40%,#2e8b8b 100%)",ic:"🥝",lb:"Fiordos de Nueva Zelanda"}},
+{c:"Malasia",k:"Kuala Lumpur",f:"🇲🇾",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#004d1f 40%,#007a32 100%)",ic:"🏙️",lb:"Torres Petronas"}},
+{c:"Singapur",k:"Singapur",f:"🇸🇬",scene:{bg:"linear-gradient(160deg,#0a001a 0%,#1f0066 40%,#330099 100%)",ic:"🦁",lb:"Marina Bay Sands"}},
+{c:"Filipinas",k:"Manila",f:"🇵🇭",scene:{bg:"linear-gradient(160deg,#001a1a 0%,#00527a 40%,#007ab8 100%)",ic:"🏝️",lb:"Archipiélago Filipino"}},
+{c:"Taiwán",k:"Taipéi",f:"🇹🇼",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#005233 40%,#007a4d 100%)",ic:"🏯",lb:"Taipei 101"}},
+]},
+{id:4,name:"Maestro",region:"África",emoji:"🦁",timer:13,desc:"Las capitales más importantes de África",
+countries:[
+{c:"Sudáfrica",k:"Pretoria",f:"🇿🇦",scene:{bg:"linear-gradient(160deg,#0a1a0a 0%,#1a4a1a 40%,#2e8b2e 100%)",ic:"🦏",lb:"Table Mountain"}},
+{c:"Egipto",k:"El Cairo",f:"🇪🇬",scene:{bg:"linear-gradient(160deg,#1a1200 0%,#7a5800 40%,#c8960a 100%)",ic:"🔺",lb:"Pirámides de Giza"}},
+{c:"Marruecos",k:"Rabat",f:"🇲🇦",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#7a0000 40%,#cc1a00 100%)",ic:"🕌",lb:"Medina de Marrakech"}},
+{c:"Etiopía",k:"Addis Abeba",f:"🇪🇹",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#cc8800 100%)",ic:"✝️",lb:"Iglesias de Lalibela"}},
+{c:"Kenia",k:"Nairobi",f:"🇰🇪",scene:{bg:"linear-gradient(160deg,#1a0800 0%,#7a3300 40%,#b85c1a 100%)",ic:"🐘",lb:"Masái Mara, Kenia"}},
+{c:"Tanzania",k:"Dodoma",f:"🇹🇿",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#00521a 40%,#007a2b 100%)",ic:"🏔️",lb:"Monte Kilimanjaro"}},
+{c:"Nigeria",k:"Abuya",f:"🇳🇬",scene:{bg:"linear-gradient(160deg,#001a00 0%,#006600 40%,#1a8c1a 100%)",ic:"🥁",lb:"Aso Rock, Abuya"}},
+{c:"Ghana",k:"Acra",f:"🇬🇭",scene:{bg:"linear-gradient(160deg,#1a0d00 0%,#7a3d00 40%,#c86400 100%)",ic:"🎋",lb:"Costa de Oro, Ghana"}},
+{c:"Senegal",k:"Dakar",f:"🇸🇳",scene:{bg:"linear-gradient(160deg,#001a00 0%,#006600 40%,#00aa00 100%)",ic:"🥁",lb:"Isla de Gorea"}},
+{c:"Túnez",k:"Túnez",f:"🇹🇳",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#8b0000 40%,#cc1a1a 100%)",ic:"🏺",lb:"Ruinas de Cartago"}},
+{c:"Uganda",k:"Kampala",f:"🇺🇬",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#007a00 100%)",ic:"🦍",lb:"Gorilas de Uganda"}},
+{c:"Zimbabwe",k:"Harare",f:"🇿🇼",scene:{bg:"linear-gradient(160deg,#001a00 0%,#005200 40%,#007a00 100%)",ic:"🌊",lb:"Cataratas Victoria"}},
+]},
+{id:5,name:"Embajador",region:"Oriente Medio y Asia Central",emoji:"🕌",timer:12,desc:"Capitales de Oriente Medio y Asia Central",
+countries:[
+{c:"Arabia Saudita",k:"Riad",f:"🇸🇦",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#007a00 100%)",ic:"🕋",lb:"La Kaaba, La Meca"}},
+{c:"Emiratos Árabes",k:"Abu Dabi",f:"🇦🇪",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#00521a 40%,#c8960a 100%)",ic:"🏙️",lb:"Burj Khalifa, Dubái"}},
+{c:"Turquía",k:"Ankara",f:"🇹🇷",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#8b0000 40%,#cc1a1a 100%)",ic:"🕌",lb:"Hagia Sophia, Estambul"}},
+{c:"Israel",k:"Jerusalén",f:"🇮🇱",scene:{bg:"linear-gradient(160deg,#001433 0%,#003d80 40%,#c8960a 100%)",ic:"🕍",lb:"Cúpula de la Roca"}},
+{c:"Irán",k:"Teherán",f:"🇮🇷",scene:{bg:"linear-gradient(160deg,#001a00 0%,#005200 40%,#cc0000 100%)",ic:"🕌",lb:"Mezquita de los Espejos"}},
+{c:"Jordania",k:"Amán",f:"🇯🇴",scene:{bg:"linear-gradient(160deg,#1a0800 0%,#7a3300 40%,#c8960a 100%)",ic:"🏺",lb:"Petra, Jordania"}},
+{c:"Kazajistán",k:"Astana",f:"🇰🇿",scene:{bg:"linear-gradient(160deg,#001a14 0%,#00524a 40%,#c8960a 100%)",ic:"🏛️",lb:"Torre Bayterek"}},
+{c:"Uzbekistán",k:"Taskent",f:"🇺🇿",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#00521a 40%,#1a7a3d 100%)",ic:"🕌",lb:"Registan, Samarcanda"}},
+{c:"Pakistán",k:"Islamabad",f:"🇵🇰",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#006600 100%)",ic:"🕌",lb:"Mezquita Badshahi"}},
+{c:"Georgia",k:"Tiflis",f:"🇬🇪",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#660000 40%,#cc0000 100%)",ic:"⛪",lb:"Casco antiguo de Tiflis"}},
+{c:"Armenia",k:"Ereván",f:"🇦🇲",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#6b1a00 40%,#cc6600 100%)",ic:"🏔️",lb:"Monte Ararat"}},
+{c:"Azerbaiyán",k:"Bakú",f:"🇦🇿",scene:{bg:"linear-gradient(160deg,#001a0a 0%,#003d1f 40%,#cc0000 100%)",ic:"🔥",lb:"Torres Llama, Bakú"}},
+]},
+{id:6,name:"Diplomático",region:"Europa del Este y los Balcanes",emoji:"🏛️",timer:12,desc:"Capitales de Europa Oriental y Balcanes",
+countries:[
+{c:"Rusia",k:"Moscú",f:"🇷🇺",scene:{bg:"linear-gradient(160deg,#0d0d1a 0%,#1a1a4a 40%,#cc0000 100%)",ic:"🏰",lb:"Catedral de San Basilio"}},
+{c:"Polonia",k:"Varsovia",f:"🇵🇱",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#8b0000 40%,#ffffff 100%)",ic:"🦅",lb:"Casco histórico de Varsovia"}},
+{c:"Hungría",k:"Budapest",f:"🇭🇺",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#7a0000 40%,#00803d 100%)",ic:"🏛️",lb:"Parlamento, Budapest"}},
+{c:"República Checa",k:"Praga",f:"🇨🇿",scene:{bg:"linear-gradient(160deg,#0a1a2e 0%,#1a3d6b 40%,#cc0000 100%)",ic:"🌉",lb:"Puente de Carlos"}},
+{c:"Rumanía",k:"Bucarest",f:"🇷🇴",scene:{bg:"linear-gradient(160deg,#001a33 0%,#ffd700 40%,#cc0000 100%)",ic:"🏰",lb:"Castillo de Bran"}},
+{c:"Ucrania",k:"Kiev",f:"🇺🇦",scene:{bg:"linear-gradient(160deg,#001a66 0%,#003d99 40%,#c8960a 100%)",ic:"⛪",lb:"Catedral de Santa Sofía"}},
+{c:"Serbia",k:"Belgrado",f:"🇷🇸",scene:{bg:"linear-gradient(160deg,#0d001a 0%,#330066 40%,#cc0000 100%)",ic:"🏰",lb:"Fortaleza Kalemegdan"}},
+{c:"Croacia",k:"Zagreb",f:"🇭🇷",scene:{bg:"linear-gradient(160deg,#001a33 0%,#cc0000 40%,#c8960a 100%)",ic:"🌊",lb:"Lagos de Plitvice"}},
+{c:"Eslovenia",k:"Liubliana",f:"🇸🇮",scene:{bg:"linear-gradient(160deg,#001a00 0%,#003d1a 40%,#0033cc 100%)",ic:"🏔️",lb:"Lago Bled"}},
+{c:"Eslovaquia",k:"Bratislava",f:"🇸🇰",scene:{bg:"linear-gradient(160deg,#0a1a2e 0%,#cc0000 40%,#003d1a 100%)",ic:"🏰",lb:"Castillo de Bratislava"}},
+{c:"Bulgaria",k:"Sofía",f:"🇧🇬",scene:{bg:"linear-gradient(160deg,#001a33 0%,#cc0000 40%,#006600 100%)",ic:"🕍",lb:"Catedral Alexander Nevski"}},
+{c:"Bielorrusia",k:"Minsk",f:"🇧🇾",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#660000 40%,#006600 100%)",ic:"🏛️",lb:"Biblioteca Nacional de Minsk"}},
+]},
+{id:7,name:"Experto",region:"Capitales sorprendentes",emoji:"🔍",timer:11,desc:"Capitales que NO son la ciudad más famosa",
+countries:[
+{c:"Suiza",k:"Berna",f:"🇨🇭",scene:{bg:"linear-gradient(160deg,#0a1a1a 0%,#cc0000 40%,#ffffff 100%)",ic:"🏔️",lb:"Berna, no Zúrich ni Ginebra"}},
+{c:"Myanmar",k:"Naipyidó",f:"🇲🇲",scene:{bg:"linear-gradient(160deg,#1a0800 0%,#7a3300 40%,#c8960a 100%)",ic:"🛕",lb:"Naipyidó, construida en 2005"}},
+{c:"India",k:"Nueva Delhi",f:"🇮🇳",scene:{bg:"linear-gradient(160deg,#1a0800 0%,#7a3300 40%,#1a6600 100%)",ic:"🕌",lb:"Taj Mahal (ciudad: Agra)"}},
+{c:"Mongolia",k:"Ulán Bator",f:"🇲🇳",scene:{bg:"linear-gradient(160deg,#001433 0%,#cc0000 40%,#c8960a 100%)",ic:"🏕️",lb:"Estepa Mongola"}},
+{c:"Nepal",k:"Katmandú",f:"🇳🇵",scene:{bg:"linear-gradient(160deg,#0a1a2e 0%,#cc0000 40%,#003d1a 100%)",ic:"🏔️",lb:"Monte Everest"}},
+{c:"Islandia",k:"Reikiavik",f:"🇮🇸",scene:{bg:"linear-gradient(160deg,#001433 0%,#003d80 40%,#1a6699 100%)",ic:"🌌",lb:"Aurora Boreal de Islandia"}},
+{c:"Noruega",k:"Oslo",f:"🇳🇴",scene:{bg:"linear-gradient(160deg,#001433 0%,#cc0000 40%,#001433 100%)",ic:"🚢",lb:"Fiordo de Oslo"}},
+{c:"Mozambique",k:"Maputo",f:"🇲🇿",scene:{bg:"linear-gradient(160deg,#001a00 0%,#c8960a 40%,#cc0000 100%)",ic:"🌊",lb:"Costa índica de Mozambique"}},
+{c:"Angola",k:"Luanda",f:"🇦🇴",scene:{bg:"linear-gradient(160deg,#001a00 0%,#cc0000 40%,#c8960a 100%)",ic:"💎",lb:"Luanda, capital de Angola"}},
+{c:"Camerún",k:"Yaundé",f:"🇨🇲",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#cc0000 100%)",ic:"🌴",lb:"Bosque tropical camerunés"}},
+{c:"Madagascar",k:"Antananarivo",f:"🇲🇬",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#7a0000 40%,#006600 100%)",ic:"🦎",lb:"Lémures de Madagascar"}},
+{c:"Paraguay",k:"Asunción",f:"🇵🇾",scene:{bg:"linear-gradient(160deg,#001a33 0%,#cc0000 40%,#001a33 100%)",ic:"🌿",lb:"Asunción, Paraguay"}},
+]},
+{id:8,name:"Estratega",region:"Países pequeños y poco conocidos",emoji:"🌐",timer:10,desc:"Pequeños países con capitales difíciles",
+countries:[
+{c:"Bután",k:"Timbu",f:"🇧🇹",scene:{bg:"linear-gradient(160deg,#1a0800 0%,#cc6600 40%,#cc0000 100%)",ic:"🏯",lb:"Monasterio Taktsang"}},
+{c:"Maldivas",k:"Malé",f:"🇲🇻",scene:{bg:"linear-gradient(160deg,#001a1a 0%,#00667a 40%,#00aacc 100%)",ic:"🏝️",lb:"Atolones de las Maldivas"}},
+{c:"Camboya",k:"Nom Pen",f:"🇰🇭",scene:{bg:"linear-gradient(160deg,#001433 0%,#003d80 40%,#cc0000 100%)",ic:"🛕",lb:"Angkor Wat, Camboya"}},
+{c:"Laos",k:"Vientián",f:"🇱🇦",scene:{bg:"linear-gradient(160deg,#cc0000 0%,#001a33 40%,#cc0000 100%)",ic:"🐘",lb:"That Luang, Vientián"}},
+{c:"Sri Lanka",k:"Sri Jayawardenepura Kotte",f:"🇱🇰",scene:{bg:"linear-gradient(160deg,#001a33 0%,#cc8800 40%,#cc0000 100%)",ic:"🦁",lb:"Roca de Sigiriya"}},
+{c:"Kirguistán",k:"Biskek",f:"🇰🇬",scene:{bg:"linear-gradient(160deg,#cc0000 0%,#cc0000 40%,#c8960a 100%)",ic:"🏔️",lb:"Montañas Tian Shan"}},
+{c:"Tayikistán",k:"Dusambé",f:"🇹🇯",scene:{bg:"linear-gradient(160deg,#001a00 0%,#cc0000 40%,#c8960a 100%)",ic:"🏔️",lb:"Pamir, techo del mundo"}},
+{c:"Timor Oriental",k:"Dili",f:"🇹🇱",scene:{bg:"linear-gradient(160deg,#001a33 0%,#cc0000 40%,#c8960a 100%)",ic:"⛪",lb:"Cristo Rei, Dili"}},
+{c:"Papúa Nueva Guinea",k:"Port Moresby",f:"🇵🇬",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#cc0000 100%)",ic:"🦜",lb:"Naturaleza única de PNG"}},
+{c:"Surinam",k:"Paramaribo",f:"🇸🇷",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#cc0000 100%)",ic:"🌴",lb:"Centro histórico de Paramaribo"}},
+{c:"Guyana",k:"Georgetown",f:"🇬🇾",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#c8960a 100%)",ic:"💧",lb:"Salto Kaieteur, Guyana"}},
+{c:"Turkmenistán",k:"Asjabad",f:"🇹🇲",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#c8960a 100%)",ic:"🏛️",lb:"Ciudad de mármol blanco"}},
+]},
+{id:9,name:"Leyenda 👑",region:"Reto Final",emoji:"👑",timer:9,desc:"Solo 9 segundos · Las más difíciles del mundo",
+countries:[
+{c:"Kosovo",k:"Pristina",f:"🇽🇰",scene:{bg:"linear-gradient(160deg,#001433 0%,#c8960a 40%,#001433 100%)",ic:"🏛️",lb:"Pristina, la capital más joven"}},
+{c:"Montenegro",k:"Podgorica",f:"🇲🇪",scene:{bg:"linear-gradient(160deg,#cc0000 0%,#c8960a 40%,#003d1a 100%)",ic:"🌊",lb:"Costa del Adriático"}},
+{c:"Macedonia del Norte",k:"Skopie",f:"🇲🇰",scene:{bg:"linear-gradient(160deg,#cc0000 0%,#c8960a 40%,#001433 100%)",ic:"🏛️",lb:"Skopie, Macedonia del Norte"}},
+{c:"Albania",k:"Tirana",f:"🇦🇱",scene:{bg:"linear-gradient(160deg,#1a0000 0%,#8b0000 40%,#cc0000 100%)",ic:"🦅",lb:"Castillo de Berat"}},
+{c:"Moldova",k:"Chisináu",f:"🇲🇩",scene:{bg:"linear-gradient(160deg,#001a33 0%,#c8960a 40%,#cc0000 100%)",ic:"🍇",lb:"Viñedos de Moldova"}},
+{c:"Eritrea",k:"Asmara",f:"🇪🇷",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#1a004d 100%)",ic:"🕌",lb:"Asmara, la Roma de África"}},
+{c:"Yibuti",k:"Yibuti",f:"🇩🇯",scene:{bg:"linear-gradient(160deg,#001a1a 0%,#00527a 40%,#006600 100%)",ic:"🌊",lb:"Lago Assal, punto más bajo de África"}},
+{c:"Islas Salomón",k:"Honiara",f:"🇸🇧",scene:{bg:"linear-gradient(160deg,#001a1a 0%,#005275 40%,#003d1a 100%)",ic:"🪸",lb:"Arrecifes de coral"}},
+{c:"Vanuatu",k:"Port Vila",f:"🇻🇺",scene:{bg:"linear-gradient(160deg,#001a00 0%,#004d00 40%,#001a1a 100%)",ic:"🌋",lb:"Volcán activo de Vanuatu"}},
+{c:"Tuvalu",k:"Funafuti",f:"🇹🇻",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d80 40%,#0066cc 100%)",ic:"🏝️",lb:"Atolón del Pacífico"}},
+{c:"Nauru",k:"Yaren",f:"🇳🇷",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d80 40%,#c8960a 100%)",ic:"🪨",lb:"Nauru, el estado más pequeño del mundo"}},
+{c:"Palau",k:"Ngerulmud",f:"🇵🇼",scene:{bg:"linear-gradient(160deg,#001a33 0%,#003d80 40%,#c8960a 100%)",ic:"🐠",lb:"Arrecifes de Palau"}},
+]},
+];
+let S={
+  unlocked:JSON.parse(localStorage.getItem('gq6_u')||'[1]'),
+  stars:JSON.parse(localStorage.getItem('gq6_s')||'{}'),
+  ranking:JSON.parse(localStorage.getItem('gq6_r')||'{}'),
+  playerName:localStorage.getItem('gq6_n')||'',
+  pendingLv:null,lv:null,queue:[],qi:0,score:0,lives:3,correct:0,
+  answered:false,tval:15,tint:null,bestTime:15,
+};
+function save(){localStorage.setItem('gq6_u',JSON.stringify(S.unlocked));localStorage.setItem('gq6_s',JSON.stringify(S.stars));localStorage.setItem('gq6_r',JSON.stringify(S.ranking));localStorage.setItem('gq6_n',S.playerName);}
+let tab='n';
+function switchTab(t){tab=t;document.getElementById('tabN').classList.toggle('active-tab',t==='n');document.getElementById('tabR').classList.toggle('active-tab',t==='r');document.getElementById('lvlCont').style.display=t==='n'?'':'none';const rp=document.getElementById('rkPanel');rp.style.display=t==='r'?'block':'none';if(t==='r')renderRanking();}
+function renderHome(){document.getElementById('lvlGrid').innerHTML=LEVELS.map(l=>{const locked=!S.unlocked.includes(l.id);const st=S.stars[l.id]||0;const best=getBest(l.id);return`<div class="lv-card ${locked?'locked':''}" data-lv="${l.id}" onclick="${locked?'lockedMsg()':'req('+l.id+')'}"> ${locked?'<div style="font-size:18px;margin-bottom:4px">🔒</div>':''}<div class="lv-badge">${l.emoji} Nivel ${l.id}</div><div class="lv-name">${l.name}</div><div class="lv-desc">${l.desc}</div><div class="lv-stars">${locked?'☆☆☆':'⭐'.repeat(st)+'☆'.repeat(3-st)}</div>${best?`<div class="lv-record">🏅 ${best.score} pts</div>`:''}<div class="lv-timer">⏱ ${l.timer}s por pregunta</div></div>`;}).join('');}
+function lockedMsg(){alert('🔒 Gana al menos 1 estrella en el nivel anterior.');}
+let rkTab=1;
+function renderRanking(){document.getElementById('rkTabs').innerHTML=LEVELS.map(l=>`<div class="rtab ${rkTab===l.id?'on':''}" onclick="setRkTab(${l.id})">${l.emoji} ${l.name}</div>`).join('');const ent=(S.ranking[rkTab]||[]).sort((a,b)=>b.score-a.score).slice(0,10);const M=['🥇','🥈','🥉'],C=['g','s','b'];document.getElementById('rkList').innerHTML=ent.length?ent.map((e,i)=>`<div class="rk-row ${C[i]||''}"><div class="rk-pos">${M[i]||'#'+(i+1)}</div><div style="flex:1"><div class="rk-name">${e.name}</div><div class="rk-meta">${e.correct}/10 · ${e.accuracy}% · ${e.date}</div></div><div><div class="rk-score">${e.score}</div><div style="font-size:9px;color:rgba(245,240,232,.3)">pts</div></div></div>`).join(''):`<div class="rk-empty">🌍 Sin puntuaciones aún.<br>¡Sé el primero!</div>`;}
+function setRkTab(id){rkTab=id;renderRanking();}
+function getBest(id){return(S.ranking[id]||[]).sort((a,b)=>b.score-a.score)[0]||null;}
+function addRank(id,e){if(!S.ranking[id])S.ranking[id]=[];S.ranking[id]=[...S.ranking[id],e].sort((a,b)=>b.score-a.score).slice(0,20);}
+function req(id){S.pendingLv=id;if(S.playerName){startLv(id);return;}showSc('nameScreen');setTimeout(()=>document.getElementById('pName').focus(),300);}
+function okName(guest=false){const v=document.getElementById('pName').value.trim();S.playerName=guest?'Invitado':(v||'Viajero');save();startLv(S.pendingLv);}
+function renderScene(q){document.getElementById('sceneBg').style.background=q.scene.bg;document.getElementById('sceneLandmark').textContent=q.scene.ic;document.getElementById('sceneLabel').textContent=q.scene.lb;document.getElementById('bigFlag').textContent=q.f;}
+function startLv(id){S.lv=LEVELS.find(l=>l.id===id);S.score=0;S.lives=3;S.correct=0;S.qi=0;S.answered=false;S.bestTime=S.lv.timer;S.queue=[...S.lv.countries].sort(()=>Math.random()-.5).slice(0,10);showSc('quiz');renderQ();}
+function renderQ(){clearInterval(S.tint);if(S.qi>=S.queue.length||S.lives<=0){showResult();return;}S.answered=false;const q=S.queue[S.qi];const T=S.lv.timer;document.getElementById('scoreDisp').textContent=S.score;document.getElementById('livesDisp').textContent='❤️'.repeat(S.lives)+'🖤'.repeat(3-S.lives);document.getElementById('qCount').textContent=`${S.qi+1}/${S.queue.length}`;document.getElementById('progBar').style.width=`${(S.qi/S.queue.length)*100}%`;document.getElementById('lvLabel').textContent=`Nivel ${S.lv.id} · ${S.lv.region}`;document.getElementById('qText').textContent=`¿Cuál es la capital de ${q.c}?`;renderScene(q);const pool=LEVELS.flatMap(l=>l.countries).map(x=>x.k);const wrongs=pool.filter(x=>x!==q.k).sort(()=>Math.random()-.5).slice(0,3);const opts=[q.k,...wrongs].sort(()=>Math.random()-.5);document.getElementById('optsGrid').innerHTML=opts.map((o,i)=>`<button class="opt-btn" onclick="pick(this,'${o.replace(/'/g,"\\'")}','${q.k.replace(/'/g,"\\'")}')"><div class="opt-ltr">${'ABCD'[i]}</div>${o}</button>`).join('');document.getElementById('fbBanner').className='fb-banner';startTimer(T);}
+function startTimer(T){S.tval=T;updTimer(T);S.tint=setInterval(()=>{S.tval--;updTimer(T);if(S.tval<=0){clearInterval(S.tint);if(!S.answered)doTimeout();}},1000);}
+function updTimer(T){const p=(S.tval/T)*100;document.getElementById('tmrBar').style.width=p+'%';document.getElementById('tmrBar').style.background=p>50?'#2aab99':p>25?'#e8c060':'#e87070';document.getElementById('tmrLbl').textContent=S.tval;document.getElementById('tmrLbl').className='tmr-lbl'+(S.tval<=4?' urgent':'');}
+function doTimeout(){if(S.answered)return;S.answered=true;playTimeout();document.querySelectorAll('.opt-btn').forEach(b=>{b.disabled=true;if(b.textContent.includes(S.queue[S.qi].k))b.classList.add('correct');});S.lives=Math.max(0,S.lives-1);showFB('timeout','⏰','¡Tiempo agotado!','La capital era: '+S.queue[S.qi].k);}
+function pick(btn,sel,cor){if(S.answered)return;S.answered=true;clearInterval(S.tint);const T=S.lv.timer,elapsed=T-S.tval;if(elapsed<S.bestTime)S.bestTime=elapsed;document.querySelectorAll('.opt-btn').forEach(b=>b.disabled=true);const ok=sel===cor;btn.classList.add(ok?'correct':'wrong');if(!ok)document.querySelectorAll('.opt-btn').forEach(b=>{if(b.textContent.includes(cor))b.classList.add('correct');});const tb=Math.max(0,Math.floor(S.tval/3));if(ok){playOK();S.score+=10+(S.lives*2)+tb;S.correct++;showFB('success','🎉','¡Correcto!',`+${10+S.lives*2+tb} pts · velocidad +${tb}`);}else{playWrong();S.lives=Math.max(0,S.lives-1);showFB('fail','💔','Incorrecto','La capital era: '+cor);}}
+function showFB(type,icon,title,sub){document.getElementById('fbBanner').className=`fb-banner ${type} show`;document.getElementById('fbIcon').textContent=icon;document.getElementById('fbTitle').textContent=title;document.getElementById('fbSub').textContent=sub;document.getElementById('nxtBtn').textContent=S.lives<=0?'Ver resultado →':'Siguiente →';}
+function nextQ(){if(S.lives<=0){showResult();return;}S.qi++;renderQ();}
+function showResult(){clearInterval(S.tint);const tot=S.queue.length,pct=S.correct/tot;const stars=pct>=.9?3:pct>=.6?2:pct>=.3?1:0;S.stars[S.lv.id]=Math.max(S.stars[S.lv.id]||0,stars);const nid=S.lv.id+1;if(stars>=1&&nid<=LEVELS.length&&!S.unlocked.includes(nid))S.unlocked.push(nid);const prevBest=getBest(S.lv.id);const today=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'short'});addRank(S.lv.id,{name:S.playerName||'Viajero',score:S.score,correct:S.correct,accuracy:Math.round(pct*100),date:today});save();const isRec=(!prevBest||S.score>prevBest.score)&&S.score>0;document.getElementById('recBanner').style.display=isRec?'flex':'none';if(isRec)document.getElementById('recTxt').textContent=prevBest?`Superaste tu récord de ${prevBest.score} pts`:'¡Primera puntuación!';const em=['😓','😊','🌟','👑'],ti=['¡Sigue Practicando!','¡Buen Trabajo!','¡Excelente!','¡Perfecto!'],su=['Inténtalo de nuevo','Vas dominando la geografía','Casi lo tienes perfecto','¡Eres un maestro de las capitales!'];document.getElementById('resEmoji').textContent=em[stars];document.getElementById('resTitle').textContent=ti[stars];document.getElementById('resSub').textContent=su[stars];document.getElementById('resStars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);document.getElementById('rPts').textContent=S.score;document.getElementById('rOk').textContent=`${S.correct}/${tot}`;document.getElementById('rAcc').textContent=Math.round(pct*100)+'%';document.getElementById('rTime').textContent=S.bestTime+'s';const nb=document.getElementById('nxtLvlBtn');if(nid<=LEVELS.length&&S.unlocked.includes(nid)){nb.textContent=`Nivel ${nid}: ${LEVELS[nid-1].name} →`;nb.style.display='';}else if(nid>LEVELS.length){nb.textContent='👑 ¡Completaste GeoQuest!';nb.style.display='';}else nb.style.display='none';showSc('result');if(stars>=2){playWin();confetti();}}
+function goRank(){showSc('home');switchTab('r');rkTab=S.lv.id;renderRanking();}
+function nextLvl(){const nid=S.lv.id+1;if(nid<=LEVELS.length&&S.unlocked.includes(nid))req(nid);else goHome();}
+function replay(){startLv(S.lv.id);}
+function showSc(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='home'){clearInterval(S.tint);renderHome();if(tab==='r')renderRanking();}}
+function goHome(){clearInterval(S.tint);showSc('home');}
+function confetti(){const c=['#c8982a','#2aab99','#3a7bd5','#d95f3b','#f5f0e8','#9b59b6'];for(let i=0;i<70;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}vw;background:${c[~~(Math.random()*c.length)]};width:${5+Math.random()*8}px;height:${5+Math.random()*8}px;--d:${(Math.random()-.5)*200}px;animation-delay:${Math.random()*.8}s;animation-duration:${2+Math.random()*2}s;border-radius:${Math.random()>.5?'50%':'2px'};`;document.body.appendChild(el);setTimeout(()=>el.remove(),4000);}}
+renderHome();
+</script>
+</body>
+</html>
